@@ -3,6 +3,7 @@
   "version": "1.0.8",
   "description": "A Promise Based API for restful interaction with Bible Gateway",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "license": "MIT",
   "scripts": {
     "test": "ava"
