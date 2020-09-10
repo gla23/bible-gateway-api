@@ -1,6 +1,6 @@
 {
   "name": "bible-gateway-api",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "A Promise Based API for restful interaction with Bible Gateway",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

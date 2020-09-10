@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.BibleGatewayAPI = void 0;
 const axios_1 = require("axios");
 class BibleGatewayAPI {
     constructor() {
@@ -26,21 +27,36 @@ class BibleGatewayAPI {
     }
     search(query = "John 3:16", version = "ESV") {
         return __awaiter(this, void 0, void 0, function* () {
-            let encodedSearch = encodeURIComponent(query);
-            let encoodedVersion = encodeURIComponent(version);
-            const url = `https://www.biblegateway.com/passage?search=${encodedSearch}&version=${encoodedVersion}`;
+            const encodedSearch = encodeURIComponent(query);
+            const encodedVersion = encodeURIComponent(version);
+            const url = `https://classic.biblegateway.com/passage?search=${encodedSearch}&version=${encodedVersion}`;
             const result = yield axios_1.default.get(url);
             const document = this.parse(result.data);
-            const verse = document.querySelector(".bcv").textContent;
-            let elements = [].slice.call(document.querySelectorAll(".text"));
-            let content = [];
-            for (let i = 0; i < elements.length; i++) {
-                let text = elements[i].textContent;
-                if (text.substr(0, 4) != "Back")
+            const verseSelectorFor = (verse) => {
+                const verseClassPrefix = document
+                    .querySelector(".text")
+                    .getAttribute("class")
+                    .slice(0, -1);
+                const classes = verseClassPrefix.split(" ");
+                let selector = classes[classes.length - 1] + verse;
+                // Get around selectors not being valid if starting with a digit e.g. 1John...
+                return (".text." +
+                    "\\" +
+                    selector.codePointAt(0).toString(16).padStart(6, "0") +
+                    selector.slice(1));
+            };
+            const verseTextOf = (verse) => {
+                const verseElems = Array.from(document.querySelectorAll(verseSelectorFor(verse))).reverse();
+                const element = verseElems[0];
+                return element ? element.textContent : null;
+            };
+            const content = [];
+            for (let i = 0; i < 200; i++) {
+                const text = verseTextOf(i + 1);
+                if (text)
                     content.push(text);
             }
-            if (content.length === 0)
-                throw new Error("Could not find verse");
+            const verse = document.querySelector(".bcv").textContent;
             return Promise.resolve({ verse, content });
         });
     }

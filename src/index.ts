@@ -25,26 +25,44 @@ class BibleGatewayAPI {
     query = "John 3:16",
     version: string = "ESV"
   ): Promise<BibleGatewayResult> {
-    let encodedSearch = encodeURIComponent(query);
-    let encoodedVersion = encodeURIComponent(version);
-
-    const url = `https://www.biblegateway.com/passage?search=${encodedSearch}&version=${encoodedVersion}`;
+    const encodedSearch = encodeURIComponent(query);
+    const encodedVersion = encodeURIComponent(version);
+    const url = `https://classic.biblegateway.com/passage?search=${encodedSearch}&version=${encodedVersion}`;
 
     const result = await axios.get(url);
-
     const document = this.parse(result.data);
 
-    const verse = document.querySelector(".bcv").textContent;
+    const verseSelectorFor = (verse: number) => {
+      const verseClassPrefix = document
+        .querySelector(".text")
+        .getAttribute("class")
+        .slice(0, -1);
+      const classes = verseClassPrefix.split(" ");
+      let selector = classes[classes.length - 1] + verse;
+      // Get around selectors not being valid if starting with a digit e.g. 1John...
+      return (
+        ".text." +
+        "\\" +
+        selector.codePointAt(0).toString(16).padStart(6, "0") +
+        selector.slice(1)
+      );
+    };
+    const verseTextOf = (verse: number | null) => {
+      const verseElems = Array.from(
+        document.querySelectorAll(verseSelectorFor(verse))
+      ).reverse();
+      const element = verseElems[0] as HTMLElement;
+      return element ? element.textContent : null;
+    };
 
-    let elements = [].slice.call(document.querySelectorAll(".text"));
+    const content: Array<string | null> = [];
 
-    let content: Array<string> = [];
-    for (let i = 0; i < elements.length; i++) {
-      let text = elements[i].textContent;
-      if (text.substr(0, 4) != "Back") content.push(text);
+    for (let i = 0; i < 200; i++) {
+      const text = verseTextOf(i + 1);
+      if (text) content.push(text);
     }
 
-    if (content.length === 0) throw new Error("Could not find verse");
+    const verse = document.querySelector(".bcv").textContent;
 
     return Promise.resolve({ verse, content });
   }
