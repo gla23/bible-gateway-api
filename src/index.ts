@@ -20,15 +20,7 @@ class BibleGatewayAPI {
       };
     }
   }
-
-  async search(
-    query = "John 3:16",
-    version: string = "ESV"
-  ): Promise<BibleGatewayResult> {
-    const encodedSearch = encodeURIComponent(query);
-    const encodedVersion = encodeURIComponent(version);
-    const url = `https://classic.biblegateway.com/passage?search=${encodedSearch}&version=${encodedVersion}`;
-
+  private async parsePage(url: string): Promise<BibleGatewayResult> {
     const result = await axios.get(url);
     const document = this.parse(result.data);
 
@@ -62,9 +54,23 @@ class BibleGatewayAPI {
       if (text) content.push(text);
     }
 
-    const verse = document.querySelector(".bcv").textContent;
+    const verse =
+      document.querySelector(".bcv")?.textContent || "No verse found";
 
     return Promise.resolve({ verse, content });
+  }
+
+  async search(
+    query = "John 3:16",
+    version: string = "ESV"
+  ): Promise<BibleGatewayResult> {
+    const encodedSearch = encodeURIComponent(query);
+    const encodedVersion = encodeURIComponent(version);
+    const url = `https://classic.biblegateway.com/passage?search=${encodedSearch}&version=${encodedVersion}`;
+    return this.parsePage(url);
+  }
+  async searchUrl(url: string) {
+    return this.parsePage(url);
   }
 }
 
