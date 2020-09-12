@@ -25,28 +25,24 @@ class BibleGatewayAPI {
             };
         }
     }
-    search(query = "John 3:16", version = "ESV") {
+    parsePage(url) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            const encodedSearch = encodeURIComponent(query);
-            const encodedVersion = encodeURIComponent(version);
-            const url = `https://classic.biblegateway.com/passage?search=${encodedSearch}&version=${encodedVersion}`;
             const result = yield axios_1.default.get(url);
             const document = this.parse(result.data);
-            const verseSelectorFor = (verse) => {
-                const verseClassPrefix = document
-                    .querySelector(".text")
-                    .getAttribute("class")
-                    .slice(0, -1);
-                const classes = verseClassPrefix.split(" ");
-                let selector = classes[classes.length - 1] + verse;
-                // Get around selectors not being valid if starting with a digit e.g. 1John...
-                return (".text." +
-                    "\\" +
-                    selector.codePointAt(0).toString(16).padStart(6, "0") +
-                    selector.slice(1));
-            };
+            const aTextElem = document.querySelector(".text");
+            if (!aTextElem)
+                return Promise.resolve({ verse: "", content: [] });
+            const verseClassPrefix = aTextElem.getAttribute("class").slice(0, -1);
+            const classes = verseClassPrefix.split(" ");
+            const selectorPrefixInvalid = classes[classes.length - 1];
+            // Get around selectors not being valid if starting with a digit e.g. 1John...
+            const selectorPrefix = ".text." +
+                "\\" +
+                selectorPrefixInvalid.codePointAt(0).toString(16).padStart(6, "0") +
+                selectorPrefixInvalid.slice(1);
             const verseTextOf = (verse) => {
-                const verseElems = Array.from(document.querySelectorAll(verseSelectorFor(verse))).reverse();
+                const verseElems = Array.from(document.querySelectorAll(selectorPrefix + verse)).reverse();
                 const element = verseElems[0];
                 return element ? element.textContent : null;
             };
@@ -56,8 +52,22 @@ class BibleGatewayAPI {
                 if (text)
                     content.push(text);
             }
-            const verse = document.querySelector(".bcv").textContent;
+            const verse = ((_a = document.querySelector(".bcv")) === null || _a === void 0 ? void 0 : _a.textContent) || "No verse found";
             return Promise.resolve({ verse, content });
+        });
+    }
+    search(query = "John 3:16", version = "ESV", useCors = true) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const encodedSearch = encodeURIComponent(query);
+            const encodedVersion = encodeURIComponent(version);
+            const url = `https://classic.biblegateway.com/passage?search=${encodedSearch}&version=${encodedVersion}`;
+            const corsPrefix = "http://allow-any-origin.appspot.com/";
+            return this.parsePage(useCors ? corsPrefix + url : url);
+        });
+    }
+    searchUrl(url) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.parsePage(url);
         });
     }
 }

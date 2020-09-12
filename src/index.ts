@@ -1,6 +1,6 @@
 import axios from "axios";
 
-interface BibleGatewayResult {
+export interface BibleGatewayResult {
   verse: string;
   content: Array<string>;
 }
@@ -24,24 +24,21 @@ class BibleGatewayAPI {
     const result = await axios.get(url);
     const document = this.parse(result.data);
 
-    const verseSelectorFor = (verse: number) => {
-      const verseClassPrefix = document
-        .querySelector(".text")
-        .getAttribute("class")
-        .slice(0, -1);
-      const classes = verseClassPrefix.split(" ");
-      let selector = classes[classes.length - 1] + verse;
-      // Get around selectors not being valid if starting with a digit e.g. 1John...
-      return (
-        ".text." +
-        "\\" +
-        selector.codePointAt(0).toString(16).padStart(6, "0") +
-        selector.slice(1)
-      );
-    };
+    const aTextElem = document.querySelector(".text");
+    if (!aTextElem) return { verse: "", content: [] };
+    const verseClassPrefix = aTextElem.getAttribute("class").slice(0, -1);
+    const classes = verseClassPrefix.split(" ");
+    const selectorPrefixInvalid = classes[classes.length - 1];
+    // Get around selectors not being valid if starting with a digit e.g. 1John...
+    const selectorPrefix =
+      ".text." +
+      "\\" +
+      selectorPrefixInvalid.codePointAt(0).toString(16).padStart(6, "0") +
+      selectorPrefixInvalid.slice(1);
+
     const verseTextOf = (verse: number | null) => {
       const verseElems = Array.from(
-        document.querySelectorAll(verseSelectorFor(verse))
+        document.querySelectorAll(selectorPrefix + verse)
       ).reverse();
       const element = verseElems[0] as HTMLElement;
       return element ? element.textContent : null;
@@ -57,17 +54,19 @@ class BibleGatewayAPI {
     const verse =
       document.querySelector(".bcv")?.textContent || "No verse found";
 
-    return Promise.resolve({ verse, content });
+    return { verse, content };
   }
 
   async search(
     query = "John 3:16",
-    version: string = "ESV"
+    version = "ESV",
+    useCors = false
   ): Promise<BibleGatewayResult> {
     const encodedSearch = encodeURIComponent(query);
     const encodedVersion = encodeURIComponent(version);
     const url = `https://classic.biblegateway.com/passage?search=${encodedSearch}&version=${encodedVersion}`;
-    return this.parsePage(url);
+    const corsPrefix = "http://allow-any-origin.appspot.com/";
+    return this.parsePage(useCors ? corsPrefix + url : url);
   }
   async searchUrl(url: string) {
     return this.parsePage(url);
